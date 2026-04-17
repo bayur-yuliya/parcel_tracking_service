@@ -1,0 +1,282 @@
+openapi: 3.0.3
+info:
+  title: swagger
+  version: 1.0.0
+  description: 'Parcel tracking service Git: [https://github.com/bayur-yuliya/parcel_tracking_service](https://github.com/bayur-yuliya/parcel_tracking_service)'
+paths:
+  /api/offices/{office_id}/parcels/:
+    get:
+      operationId: offices_parcels_retrieve
+      parameters:
+      - in: path
+        name: office_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - offices
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/parcels/:
+    get:
+      operationId: parcels_list
+      parameters:
+      - in: query
+        name: origin_office
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - accepted
+          - arrived
+          - created
+          - delivered
+          - in_transit
+          - returned
+        description: |-
+          * `created` - Створено
+          * `accepted` - Прийнято
+          * `in_transit` - У дорозі
+          * `arrived` - Прибула
+          * `delivered` - Доставлено
+          * `returned` - Повернуто
+      tags:
+      - parcels
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedParcelList'
+          description: ''
+    post:
+      operationId: parcels_create
+      tags:
+      - parcels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParcelCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ParcelCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ParcelCreate'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParcelCreate'
+          description: ''
+  /api/parcels/{tracking_number}/:
+    get:
+      operationId: parcels_retrieve
+      parameters:
+      - in: path
+        name: tracking_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - parcels
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/parcels/{tracking_number}/status/:
+    post:
+      operationId: parcels_status_create
+      parameters:
+      - in: path
+        name: tracking_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - parcels
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    PaginatedParcelList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Parcel'
+    Parcel:
+      type: object
+      properties:
+        tracking_number:
+          type: string
+          maxLength: 15
+        sender:
+          type: string
+          readOnly: true
+        recipient:
+          type: string
+          readOnly: true
+        weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          description: Вага від 0.01 до 30.00 кг
+        declared_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        current_office:
+          type: string
+          format: uuid
+        origin_office:
+          type: string
+          format: uuid
+          readOnly: true
+        destination_office:
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParcelStatusHistory'
+          readOnly: true
+      required:
+      - created_at
+      - current_office
+      - declared_value
+      - destination_office
+      - origin_office
+      - recipient
+      - sender
+      - status_history
+      - weight
+    ParcelCreate:
+      type: object
+      properties:
+        sender:
+          type: integer
+        recipient:
+          type: integer
+        weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          description: Вага від 0.01 до 30.00 кг
+        declared_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        origin_office:
+          type: string
+          format: uuid
+        destination_office:
+          type: string
+          format: uuid
+      required:
+      - declared_value
+      - destination_office
+      - origin_office
+      - recipient
+      - sender
+      - weight
+    ParcelStatusHistory:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        office:
+          type: string
+          format: uuid
+          nullable: true
+        comment:
+          type: string
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+    StatusEnum:
+      enum:
+      - created
+      - accepted
+      - in_transit
+      - arrived
+      - delivered
+      - returned
+      type: string
+      description: |-
+        * `created` - Створено
+        * `accepted` - Прийнято
+        * `in_transit` - У дорозі
+        * `arrived` - Прибула
+        * `delivered` - Доставлено
+        * `returned` - Повернуто
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

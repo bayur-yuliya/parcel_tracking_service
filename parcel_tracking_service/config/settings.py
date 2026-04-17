@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "phonenumber_field",
     "django_filters",
     "rest_framework",
+    "drf_spectacular",
     "logistics.apps.LogisticsConfig",
 ]
 
@@ -120,3 +121,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "swagger",
+    "DESCRIPTION": "Parcel tracking service "
+    "Git: [https://github.com/bayur-yuliya/parcel_tracking_service](https://github.com/bayur-yuliya/parcel_tracking_service)",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
