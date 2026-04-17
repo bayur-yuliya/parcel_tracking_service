@@ -1,4 +1,5 @@
-from rest_framework import status, generics
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -22,6 +23,8 @@ class ParcelListCreateView(generics.ListCreateAPIView):
     )
     serializer_class = ParcelSerializer
     pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["status", "origin_office"]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -66,6 +69,7 @@ class OfficeParcelsView(APIView):
         parcels = Parcel.objects.filter(
             status=Status.ARRIVED,
             current_office_id=office_id,
+            destination_office_id=office_id,
         )
 
         serializer = ParcelSerializer(parcels, many=True)

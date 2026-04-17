@@ -112,8 +112,7 @@ class Parcel(models.Model):
         is_created = self.pk is None
 
         if is_created:
-            if not self.current_office:
-                self.current_office = self.origin_office
+            self.current_office = self.origin_office
             self.status = Status.CREATED
 
         if not kwargs.pop("skip_clean", False):

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "phonenumber_field",
+    "django_filters",
     "rest_framework",
     "logistics.apps.LogisticsConfig",
 ]

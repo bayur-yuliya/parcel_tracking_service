@@ -17,8 +17,6 @@ class ParcelCreateSerializer(serializers.ModelSerializer):
 
 
 class ParcelStatusHistorySerializer(serializers.ModelSerializer):
-    origin_office = serializers.PrimaryKeyRelatedField(read_only=True)
-    destination_office = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = ParcelStatusHistory
@@ -41,6 +39,7 @@ class ParcelSerializer(serializers.ModelSerializer):
             "weight",
             "declared_value",
             "status",
+            "current_office",
             "origin_office",
             "destination_office",
             "created_at",
@@ -50,5 +49,5 @@ class ParcelSerializer(serializers.ModelSerializer):
 
 class UpdateStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Parcel._meta.get_field("status").choices)
-    office_id = serializers.UUIDField(required=False)
+    office_id = serializers.UUIDField()
     comment = serializers.CharField(required=False, allow_blank=True)
