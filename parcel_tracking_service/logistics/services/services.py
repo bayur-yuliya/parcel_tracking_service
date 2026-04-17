@@ -1,5 +1,5 @@
-import uuid
+from rest_framework.pagination import PageNumberPagination
 
 
-def generate_tracking_number():
-    return uuid.uuid4().hex[:12].upper()
+class StandardPagination(PageNumberPagination):
+    page_size = 10

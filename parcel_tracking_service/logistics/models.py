@@ -1,11 +1,11 @@
 import uuid
+from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
-
-from .services.services import generate_tracking_number
 
 
 class Status(models.TextChoices):
@@ -17,11 +17,22 @@ class Status(models.TextChoices):
     RETURNED = "returned", "Повернуто"
 
 
+def get_tracking_number():
+    while True:
+        number = uuid.uuid4().hex[:12].upper()
+        if not Parcel.objects.filter(tracking_number=number).exists():
+            return number
+
+
 class Client(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.SET_NULL, related_name="client", null=True, blank=True
     )
-    full_name = models.CharField(max_length=150, blank=True)
+    full_name = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text="ПІБ",
+    )
     phone = PhoneNumberField(
         max_length=13,
     )
@@ -43,7 +54,7 @@ class PostOffice(models.Model):
 
 class Parcel(models.Model):
     tracking_number = models.CharField(
-        max_length=15, default=generate_tracking_number, unique=True, db_index=True
+        max_length=15, default=get_tracking_number, unique=True, db_index=True
     )
     sender = models.ForeignKey(
         Client, on_delete=models.PROTECT, related_name="sent_parcels"
@@ -52,7 +63,13 @@ class Parcel(models.Model):
         Client, on_delete=models.PROTECT, related_name="received_parcels"
     )
     weight = models.DecimalField(
-        max_digits=6, decimal_places=2, validators=[MinValueValidator(0.01)]
+        max_digits=6,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal("0.01")),
+            MaxValueValidator(Decimal("30.00")),
+        ],
+        help_text="Вага від 0.01 до 30.00 кг",
     )
     declared_value = models.DecimalField(
         max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
@@ -63,6 +80,9 @@ class Parcel(models.Model):
     origin_office = models.ForeignKey(
         PostOffice, on_delete=models.PROTECT, related_name="outgoing_parcels"
     )
+    current_office = models.ForeignKey(
+        PostOffice, on_delete=models.PROTECT, related_name="current_location"
+    )
     destination_office = models.ForeignKey(
         PostOffice, related_name="incoming_parcels", on_delete=models.PROTECT
     )
@@ -71,17 +91,51 @@ class Parcel(models.Model):
     def __str__(self):
         return self.tracking_number
 
+    def clean(self):
+        super().clean()
+
+        if self.sender == self.recipient:
+            raise ValidationError("Відправник і одержувач не можуть співпадати")
+
+        if (
+            self.origin_office
+            and self.destination_office
+            and self.origin_office == self.destination_office
+        ):
+            raise ValidationError(
+                {
+                    "destination_office": "Відділення призначення не може збігатися з відділенням відправлення."
+                }
+            )
+
     def save(self, *args, **kwargs):
         is_created = self.pk is None
+
+        if is_created:
+            if not self.current_office:
+                self.current_office = self.origin_office
+            self.status = Status.CREATED
+
+        if not kwargs.pop("skip_clean", False):
+            self.full_clean()
+
         super().save(*args, **kwargs)
 
         if is_created:
             ParcelStatusHistory.objects.create(
                 parcel=self,
                 status=Status.CREATED,
-                office=None,
+                office=self.origin_office,
                 comment="Parcel created",
             )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(origin_office=models.F("destination_office")),
+                name="origin_not_equal_destination",
+            ),
+        ]
 
 
 class ParcelStatusHistory(models.Model):

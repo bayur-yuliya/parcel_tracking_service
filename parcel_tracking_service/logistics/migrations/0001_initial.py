@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                     "tracking_number",
                     models.CharField(
                         db_index=True,
-                        default=logistics.services.services.generate_tracking_number,
+                        default=logistics.models.get_tracking_number,
                         max_length=15,
                         unique=True,
                     ),
