@@ -26,7 +26,8 @@ class ParcelStatusHistorySerializer(serializers.ModelSerializer):
 class ParcelSerializer(serializers.ModelSerializer):
     sender = serializers.StringRelatedField()
     recipient = serializers.StringRelatedField()
-    origin_office = serializers.PrimaryKeyRelatedField(read_only=True)
+    origin_office = serializers.StringRelatedField(read_only=True)
+    current_office = serializers.PrimaryKeyRelatedField(read_only=True)
     destination_office = serializers.PrimaryKeyRelatedField(read_only=True)
     status_history = ParcelStatusHistorySerializer(many=True, read_only=True)
 
@@ -46,8 +47,17 @@ class ParcelSerializer(serializers.ModelSerializer):
             "status_history",
         ]
 
+    def validate(self, data):
+        if data["sender"] == data["recipient"]:
+            raise serializers.ValidationError("Sender and recipient must differ")
+
+        if data["origin_office"] == data["destination_office"]:
+            raise serializers.ValidationError("Offices must differ")
+
+        return data
+
 
 class UpdateStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Parcel._meta.get_field("status").choices)
-    office_id = serializers.UUIDField()
+    office_id = serializers.UUIDField(required=False)
     comment = serializers.CharField(required=False, allow_blank=True)

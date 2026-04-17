@@ -1,3 +1,4 @@
+import logging
 import uuid
 from decimal import Decimal
 
@@ -6,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
+
+logger = logging.getLogger(__name__)
 
 
 class Status(models.TextChoices):
@@ -95,6 +98,9 @@ class Parcel(models.Model):
         super().clean()
 
         if self.sender == self.recipient:
+            logger.warning(
+                f"Validation failed: Sender and Recipient are the same for parcel {self.tracking_number}"
+            )
             raise ValidationError("Відправник і одержувач не можуть співпадати")
 
         if (
@@ -102,6 +108,10 @@ class Parcel(models.Model):
             and self.destination_office
             and self.origin_office == self.destination_office
         ):
+            logger.warning(
+                f"Validation failed: Origin office and "
+                f"destination office are the same for parcel {self.tracking_number}"
+            )
             raise ValidationError(
                 {
                     "destination_office": "Відділення призначення не може збігатися з відділенням відправлення."

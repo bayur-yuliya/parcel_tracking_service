@@ -21,16 +21,19 @@ paths:
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parcel'
+          description: ''
   /api/parcels/:
     get:
       operationId: parcels_list
       parameters:
       - in: query
-        name: origin_office
+        name: from_city
         schema:
           type: string
-          format: uuid
       - name: page
         required: false
         in: query
@@ -112,7 +115,11 @@ paths:
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parcel'
+          description: ''
   /api/parcels/{tracking_number}/status/:
     post:
       operationId: parcels_status_create
@@ -124,13 +131,29 @@ paths:
         required: true
       tags:
       - parcels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatus'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateStatus'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateStatus'
+        required: true
       security:
       - cookieAuth: []
       - basicAuth: []
       - {}
       responses:
-        '200':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateStatus'
+          description: ''
 components:
   schemas:
     PaginatedParcelList:
@@ -182,9 +205,9 @@ components:
         current_office:
           type: string
           format: uuid
+          readOnly: true
         origin_office:
           type: string
-          format: uuid
           readOnly: true
         destination_office:
           type: string
@@ -272,6 +295,18 @@ components:
         * `arrived` - Прибула
         * `delivered` - Доставлено
         * `returned` - Повернуто
+    UpdateStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        office_id:
+          type: string
+          format: uuid
+        comment:
+          type: string
+      required:
+      - status
   securitySchemes:
     basicAuth:
       type: http

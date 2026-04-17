@@ -48,6 +48,7 @@ platformdirs==4.9.6
 poetry-core==2.3.2
 pyproject_hooks==1.2.0
 python-discovery==1.2.2
+python-dotenv==1.2.2
 pytokens==0.4.1
 pywin32-ctypes==0.2.3
 PyYAML==6.0.3

@@ -1,8 +1,10 @@
+import logging
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics
-from rest_framework.views import APIView
+from rest_framework import generics, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+
+from .filters import ParcelFilter
 from .serializers import (
     ParcelSerializer,
     ParcelCreateSerializer,
@@ -11,6 +13,8 @@ from .serializers import (
 from ...models import Parcel, PostOffice, Status
 from ...services.parcel_service import update_status
 from ...services.services import StandardPagination
+
+logger = logging.getLogger(__name__)
 
 
 class ParcelListCreateView(generics.ListCreateAPIView):
@@ -24,7 +28,16 @@ class ParcelListCreateView(generics.ListCreateAPIView):
     serializer_class = ParcelSerializer
     pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["status", "origin_office"]
+    filterset_class = ParcelFilter
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        parcel = serializer.save()
+
+        return Response(
+            {"tracking_number": parcel.tracking_number}, status=status.HTTP_201_CREATED
+        )
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -32,45 +45,60 @@ class ParcelListCreateView(generics.ListCreateAPIView):
         return ParcelSerializer
 
 
-class ParcelDetailView(APIView):
-    def get(self, request, tracking_number):
+class ParcelDetailView(generics.RetrieveAPIView):
+    queryset = Parcel.objects.select_related(
+        "sender", "recipient", "current_status"
+    ).prefetch_related("status_history")
+    lookup_field = "tracking_number"
+    serializer_class = ParcelSerializer
+
+
+class ParcelUpdateStatusView(generics.CreateAPIView):
+    serializer_class = UpdateStatusSerializer
+
+    def create(self, request, *args, **kwargs):
+        tracking_number = self.kwargs.get("tracking_number")
         parcel = get_object_or_404(Parcel, tracking_number=tracking_number)
-        serializer = ParcelSerializer(parcel)
-        return Response(serializer.data)
 
+        logger.info(
+            f"POST request to update status for {tracking_number} by user {request.user}"
+        )
 
-class ParcelUpdateStatusView(APIView):
-    def post(self, request, tracking_number):
-        parcel = get_object_or_404(Parcel, tracking_number=tracking_number)
-
-        serializer = UpdateStatusSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        office = None
         office_id = serializer.validated_data.get("office_id")
-
-        if office_id:
-            office = get_object_or_404(PostOffice, id=office_id)
+        office = get_object_or_404(PostOffice, id=office_id) if office_id else None
 
         updated_parcel = update_status(
-            parcel_id=parcel.id,
+            parcel=parcel,
             new_status=serializer.validated_data["status"],
             office=office,
             comment=serializer.validated_data.get("comment", ""),
         )
 
-        return Response({"status": updated_parcel.status})
+        return Response(
+            {"status": updated_parcel.status}, status=status.HTTP_201_CREATED
+        )
 
 
-class OfficeParcelsView(APIView):
+class OfficeParcelsView(generics.GenericAPIView):
+    serializer_class = ParcelSerializer
     pagination_class = StandardPagination
 
     def get(self, request, office_id):
+        request_office_id = get_object_or_404(PostOffice, id=office_id)
+
         parcels = Parcel.objects.filter(
             status=Status.ARRIVED,
-            current_office_id=office_id,
-            destination_office_id=office_id,
-        )
+            current_office_id=request_office_id,
+            destination_office_id=request_office_id,
+        ).select_related("sender", "recipient", "current_office")
 
-        serializer = ParcelSerializer(parcels, many=True)
+        page = self.paginate_queryset(parcels)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(parcels, many=True)
         return Response(serializer.data)
