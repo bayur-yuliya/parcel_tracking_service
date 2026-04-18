@@ -2,7 +2,7 @@ import logging
 from rest_framework.exceptions import ValidationError
 from django.db import transaction
 
-from ..models import Status, ParcelStatusHistory, Parcel
+from logistics.models import Status, ParcelStatusHistory, Parcel
 
 logger = logging.getLogger(__name__)
 

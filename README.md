@@ -2,6 +2,154 @@
 
 Backend service for parcel registration, tracking, and status management, built with Django and Django REST Framework.
 
+---
+
+## Quick Start (Recommended)
+
+```bash
+git clone https://github.com/bayur-yuliya/parcel_tracking_service
+cd parcel_tracking_service
+cp .env.example .env
+```
+
+Edit `.env` if needed (DB credentials, etc.)
+
+```bash
+docker-compose up --build
+```
+
+### Load initial data
+
+```bash
+docker-compose exec web python manage.py create_info
+```
+
+### Create superuser (optional)
+
+```bash
+docker-compose exec web python manage.py createsuperuser
+```
+
+App will be available at:
+
+```
+http://localhost:8000
+```
+
+Swagger:
+
+```
+http://localhost:8000/api/schema/swagger-ui/
+```
+
+---
+
+## Authentication
+
+This project uses **Token Authentication**.
+
+### Get token
+
+```bash
+curl -X POST http://localhost:8000/api/token/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "password"
+}'
+```
+
+Response:
+
+```json
+{
+  "token": "your_token_here",
+  "username": "admin"
+}
+```
+
+### Use token in requests
+
+```bash
+Authorization: Token your_token_here
+```
+
+❗ Not `Bearer`, but `Token`
+
+---
+
+## API Usage Examples (curl)
+
+### Create parcel
+
+```bash
+curl -X POST http://localhost:8000/api/parcels/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Token your_token_here" \
+  -d '{
+    "sender": 1,
+    "recipient": 2,
+    "weight": "2.50",
+    "declared_value": "1000.00",
+    "origin_office": "uuid-origin",
+    "destination_office": "uuid-destination"
+}'
+```
+
+---
+
+### Get parcel details
+
+```bash
+curl -X GET http://localhost:8000/api/parcels/ABC123456789/
+```
+
+---
+
+### List parcels (with filters)
+
+```bash
+curl -X GET "http://localhost:8000/api/parcels/?status=in_transit&page=1" \
+  -H "Authorization: Token your_token_here"
+```
+
+---
+
+### Update parcel status
+
+```bash
+curl -X POST http://localhost:8000/api/parcels/ABC123456789/status/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Token your_token_here" \
+  -d '{
+    "status": "in_transit",
+    "office_id": "uuid-office",
+    "comment": "Sent from warehouse"
+}'
+```
+
+---
+
+### Get parcels in office
+
+```bash
+curl -X GET http://localhost:8000/api/offices/uuid-office/parcels/ \
+  -H "Authorization: Token your_token_here"
+```
+
+Response is paginated:
+
+```json
+{
+  "count": 10,
+  "next": "...",
+  "previous": "...",
+  "results": []
+}
+```
+
+---
+
 ## Functionality
 
 * Create parcels with automatically generated tracking numbers
@@ -20,97 +168,6 @@ Backend service for parcel registration, tracking, and status management, built 
 * Django REST Framework
 * PostgreSQL
 * Docker
-
----
-
-## Installation and Setup
-
-### 1. Clone repository
-
-```bash
-git clone https://github.com/bayur-yuliya/parcel_tracking_service
-cd parcel_tracking_service
-```
-
-### 2. Create .env file
-
-### 3. Build and run containers
-
-```bash
-docker-compose up --build
-```
-### 4. Load seed data
-
-```bash
-docker-compose exec web python manage.py create_info
-```
-
-### 5. Create superuser (optional)
-
-```bash
-docker-compose exec web python manage.py createsuperuser
-```
-
-
----
-
-## API Endpoints
-
-### 1. Create parcel
-
-POST `/api/parcels/`
-
-```json
-{
-  "sender": 1,
-  "recipient": 2,
-  "weight": "5.50",
-  "declared_value": "1000.00",
-  "origin_office": "UUID",
-  "destination_office": "UUID"
-}
-```
-
----
-
-### 2. Get parcel details
-
-GET `/api/parcels/{tracking_number}/`
-
----
-
-### 3. Update parcel status
-
-POST `/api/parcels/{tracking_number}/status/`
-
-```json
-{
-  "status": "accepted",
-  "office_id": "UUID",
-  "comment": "Parcel accepted at office"
-}
-```
-
----
-
-### 4. Get parcels in a specific office
-
-Responses are paginated:
-
-{
-  "count": 10,
-  "next": "...",
-  "previous": "...",
-  "results": [...]
-}
-
-GET `/api/offices/{id}/parcels/`
-
----
-
-### 5. Filter parcels
-
-GET `/api/parcels/?status=in_transit&from_city=Kyiv`
 
 ---
 
@@ -138,24 +195,19 @@ GET `/api/parcels/?status=in_transit&from_city=Kyiv`
 
 ---
 
-## API Documentation (Swagger)
+## Docker Services
 
-Available at:
+### PostgreSQL (db)
 
-```
-/api/schema/swagger-ui/
-```
+* PostgreSQL 15
+* Volume: `postgres_data`
+* Port: 5432
 
-## What Docker does
+### Django (web)
 
-### PostgreSQL service (db)
-- PostgreSQL 15
-- Persistent volume: postgres_data
-- Port: 5432
+* Built from Dockerfile
+* Working directory:
 
-### Django service (web)
-- Builds from Dockerfile
-- Workdir:
   ```
   /app/parcel_tracking_service
   ```
@@ -164,15 +216,36 @@ Available at:
 
 ## Logging
 
-* `audit.log` — records business actions
-* `errors.log` — records system errors
+* `audit.log` — business actions
+* `errors.log` — system errors
 
 ---
 
 ## Implementation Notes
 
-* Status updates are wrapped in `transaction.atomic()`
-* `select_for_update()` is used to prevent race conditions
-* Each status change creates a history record
-* Model-level validation is enforced via `clean()` and database constraints
+* Status updates use `transaction.atomic()`
+* `select_for_update()` prevents race conditions
+* Each status change is stored in history
+* Validation enforced at model and DB level
 
+---
+
+## Important Notes
+
+* UUID fields must contain real values from DB
+* Most endpoints require authentication + employee role
+* Public endpoint:
+
+  * `GET /api/parcels/{tracking_number}/`
+
+---
+
+## Example Workflow
+
+1. Create users and offices via seed command
+2. Get auth token
+3. Create parcel
+4. Update status through lifecycle
+5. Track parcel via public endpoint
+
+---

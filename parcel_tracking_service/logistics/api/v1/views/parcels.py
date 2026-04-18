@@ -13,8 +13,8 @@ from logistics.api.v1.serializers import (
     UpdateStatusSerializer,
 )
 from logistics.models import Parcel, PostOffice, Status
-from logistics.services.parcel_service import update_status
-from logistics.services.services import StandardPagination
+from logistics.service import update_status
+from logistics.utils import StandardPagination
 
 logger = logging.getLogger(__name__)
 

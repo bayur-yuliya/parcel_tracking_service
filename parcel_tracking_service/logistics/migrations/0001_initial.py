@@ -2,7 +2,7 @@
 
 import django.core.validators
 import django.db.models.deletion
-import logistics.services.services
+import logistics.utils
 import phonenumber_field.modelfields
 import uuid
 from django.conf import settings

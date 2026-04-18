@@ -16,9 +16,7 @@ paths:
       tags:
       - offices
       security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+      - tokenAuth: []
       responses:
         '200':
           content:
@@ -61,9 +59,7 @@ paths:
       tags:
       - parcels
       security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+      - tokenAuth: []
       responses:
         '200':
           content:
@@ -88,9 +84,7 @@ paths:
               $ref: '#/components/schemas/ParcelCreate'
         required: true
       security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+      - tokenAuth: []
       responses:
         '201':
           content:
@@ -110,8 +104,7 @@ paths:
       tags:
       - parcels
       security:
-      - cookieAuth: []
-      - basicAuth: []
+      - tokenAuth: []
       - {}
       responses:
         '200':
@@ -144,9 +137,7 @@ paths:
               $ref: '#/components/schemas/UpdateStatus'
         required: true
       security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+      - tokenAuth: []
       responses:
         '201':
           content:
@@ -154,8 +145,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/UpdateStatus'
           description: ''
+  /api/token/:
+    post:
+      operationId: token_create
+      tags:
+      - token
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+          description: ''
 components:
   schemas:
+    AuthToken:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - password
+      - token
+      - username
     PaginatedParcelList:
       type: object
       required:
@@ -308,10 +341,8 @@ components:
       required:
       - status
   securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-    cookieAuth:
+    tokenAuth:
       type: apiKey
-      in: cookie
-      name: sessionid
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
