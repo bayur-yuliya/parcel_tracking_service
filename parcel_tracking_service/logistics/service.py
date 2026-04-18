@@ -71,7 +71,10 @@ def update_status(tracking_number, new_status, user, office=None, comment=""):
     except ValidationError:
         raise
     except Exception as e:
-        logger.error(f"Critical system error updating parcel {tracking_number}: {e}", exc_info=True)
+        logger.error(
+            f"Critical system error updating parcel {tracking_number}: {e}",
+            exc_info=True,
+        )
         raise
 
 
@@ -79,10 +82,13 @@ def check_office_restrictions(parcel, new_status, office):
     if new_status == Status.ACCEPTED and office != parcel.origin_office:
         raise ValidationError("Посилку можна прийняти тільки у відділенні відправлення")
 
-    if new_status in [Status.ARRIVED, Status.DELIVERED] and office != parcel.destination_office:
+    if (
+        new_status in [Status.ARRIVED, Status.DELIVERED]
+        and office != parcel.destination_office
+    ):
         error_msg = (
             "Посилка може прибути тільки у відділення призначення"
-            if new_status == Status.ARRIVED else
-            "Посилку можна видати лише у відділенні призначення"
+            if new_status == Status.ARRIVED
+            else "Посилку можна видати лише у відділенні призначення"
         )
         raise ValidationError(error_msg)
