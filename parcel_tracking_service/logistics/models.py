@@ -139,6 +139,7 @@ class Parcel(models.Model):
             )
 
     class Meta:
+        ordering = ["-created_at", "id"]
         constraints = [
             models.CheckConstraint(
                 condition=~models.Q(origin_office=models.F("destination_office")),
