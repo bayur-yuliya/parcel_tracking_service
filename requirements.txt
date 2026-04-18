@@ -46,6 +46,7 @@ phonenumbers==9.0.28
 pkginfo==1.12.1.2
 platformdirs==4.9.6
 poetry-core==2.3.2
+psycopg==3.3.3
 pyproject_hooks==1.2.0
 python-discovery==1.2.2
 python-dotenv==1.2.2

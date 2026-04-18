@@ -71,7 +71,7 @@ class ParcelUpdateStatusView(generics.CreateAPIView):
         office = get_object_or_404(PostOffice, id=office_id) if office_id else None
 
         updated_parcel = update_status(
-            parcel=parcel,
+            tracking_number=tracking_number,
             new_status=serializer.validated_data["status"],
             office=office,
             comment=serializer.validated_data.get("comment", ""),

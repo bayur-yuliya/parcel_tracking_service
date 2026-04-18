@@ -15,9 +15,12 @@ ALLOWED_TRANSITIONS = {
 FINAL_STATUSES = [Status.DELIVERED, Status.RETURNED]
 
 
-def update_status(parcel, new_status, office=None, comment=""):
+def update_status(tracking_number, new_status, office=None, comment=""):
     try:
         with transaction.atomic():
+            parcel = Parcel.objects.select_for_update().get(
+                tracking_number=tracking_number
+            )
             current_status = parcel.status
 
             if current_status in FINAL_STATUSES:

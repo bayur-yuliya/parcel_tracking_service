@@ -18,7 +18,8 @@ Backend service for parcel registration, tracking, and status management, built 
 * Python 3.11+
 * Django
 * Django REST Framework
-* SQLite (default)
+* PostgreSQL
+* Docker
 
 ---
 
@@ -31,31 +32,25 @@ git clone https://github.com/bayur-yuliya/parcel_tracking_service
 cd parcel_tracking_service
 ```
 
-### 2. Create virtual environment
+### 2. Create .env file
+
+### 3. Build and run containers
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux / Mac
-venv\Scripts\activate     # Windows
+docker-compose up --build
 ```
-
-### 3. Install dependencies
+### 4. Load seed data
 
 ```bash
-pip install -r requirements.txt
+docker-compose exec web python manage.py create_info
 ```
 
-### 4. Apply migrations
+### 5. Create superuser (optional)
 
 ```bash
-python manage.py migrate
+docker-compose exec web python manage.py createsuperuser
 ```
 
-### 5. Run server
-
-```bash
-python manage.py runserver
-```
 
 ---
 
@@ -150,6 +145,20 @@ Available at:
 ```
 /api/schema/swagger-ui/
 ```
+
+## What Docker does
+
+### PostgreSQL service (db)
+- PostgreSQL 15
+- Persistent volume: postgres_data
+- Port: 5432
+
+### Django service (web)
+- Builds from Dockerfile
+- Workdir:
+  ```
+  /app/parcel_tracking_service
+  ```
 
 ---
 
