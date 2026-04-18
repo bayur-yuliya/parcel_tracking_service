@@ -51,7 +51,7 @@ class ParcelListCreateView(generics.ListCreateAPIView):
 class ParcelDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     queryset = Parcel.objects.select_related(
-        "sender", "recipient", "current_status"
+        "sender", "recipient", "current_office"
     ).prefetch_related("status_history")
     lookup_field = "tracking_number"
     serializer_class = ParcelSerializer
@@ -94,12 +94,12 @@ class OfficeParcelsView(generics.GenericAPIView):
     pagination_class = StandardPagination
 
     def get(self, request, office_id):
-        request_office_id = get_object_or_404(PostOffice, id=office_id)
+        request_office = get_object_or_404(PostOffice, id=office_id)
 
         parcels = Parcel.objects.filter(
             status=Status.ARRIVED,
-            current_office_id=request_office_id,
-            destination_office_id=request_office_id,
+            current_office=request_office,
+            destination_office=request_office,
         ).select_related("sender", "recipient", "current_office")
 
         page = self.paginate_queryset(parcels)

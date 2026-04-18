@@ -15,6 +15,15 @@ class ParcelCreateSerializer(serializers.ModelSerializer):
             "destination_office",
         ]
 
+    def validate(self, data):
+        if data["sender"] == data["recipient"]:
+            raise serializers.ValidationError("Sender and recipient must differ")
+
+        if data["origin_office"] == data["destination_office"]:
+            raise serializers.ValidationError("Offices must differ")
+
+        return data
+
 
 class ParcelStatusHistorySerializer(serializers.ModelSerializer):
 
