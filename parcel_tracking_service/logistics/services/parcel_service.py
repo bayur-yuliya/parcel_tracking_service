@@ -15,13 +15,17 @@ ALLOWED_TRANSITIONS = {
 FINAL_STATUSES = [Status.DELIVERED, Status.RETURNED]
 
 
-def update_status(tracking_number, new_status, office=None, comment=""):
+def update_status(tracking_number, new_status, user, office=None, comment=""):
     try:
         with transaction.atomic():
             parcel = Parcel.objects.select_for_update().get(
                 tracking_number=tracking_number
             )
             current_status = parcel.status
+            employee = user.employee
+
+            if office and office != employee.office:
+                raise ValidationError("Ви можете працювати тільки зі своїм відділенням")
 
             if current_status in FINAL_STATUSES:
                 raise ValidationError("Статус уже фінальний, зміна неможлива")
@@ -55,11 +59,11 @@ def update_status(tracking_number, new_status, office=None, comment=""):
             )
 
         logger.info(
-            f"Successfully updated parcel {parcel_id} to {new_status} at office {office}"
+            f"Successfully updated parcel {tracking_number} to {new_status} at office {office}"
         )
         return parcel
     except ValidationError as e:
-        logger.warning(f"Validation failed for parcel {parcel_id}: {e}")
+        logger.warning(f"Validation failed for parcel {tracking_number}: {e}")
         raise
     except Exception as e:
         logger.error(f"Critical system error: {e}", exc_info=True)

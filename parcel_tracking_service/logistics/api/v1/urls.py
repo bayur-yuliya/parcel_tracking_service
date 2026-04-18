@@ -5,7 +5,8 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
-from logistics.api.v1.views import (
+from logistics.api.v1.views.auth import CustomAuthToken
+from logistics.api.v1.views.parcels import (
     ParcelDetailView,
     ParcelUpdateStatusView,
     OfficeParcelsView,
@@ -23,6 +24,8 @@ urlpatterns = [
     path(
         "schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"
     ),
+    # auth
+    path("token/", CustomAuthToken.as_view()),
     # parcels urls
     path("parcels/", ParcelListCreateView.as_view()),
     path("parcels/<str:tracking_number>/", ParcelDetailView.as_view()),

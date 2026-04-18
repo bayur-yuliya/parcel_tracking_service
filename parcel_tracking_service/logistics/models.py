@@ -55,6 +55,14 @@ class PostOffice(models.Model):
         return f"№{self.index}, {self.city}"
 
 
+class Employee(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    office = models.ForeignKey(PostOffice, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return f"{self.user.username} ({self.office})"
+
+
 class Parcel(models.Model):
     tracking_number = models.CharField(
         max_length=15, default=get_tracking_number, unique=True, db_index=True
@@ -89,34 +97,10 @@ class Parcel(models.Model):
     destination_office = models.ForeignKey(
         PostOffice, related_name="incoming_parcels", on_delete=models.PROTECT
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return self.tracking_number
-
-    def clean(self):
-        super().clean()
-
-        if self.sender == self.recipient:
-            logger.warning(
-                f"Validation failed: Sender and Recipient are the same for parcel {self.tracking_number}"
-            )
-            raise ValidationError("Відправник і одержувач не можуть співпадати")
-
-        if (
-            self.origin_office
-            and self.destination_office
-            and self.origin_office == self.destination_office
-        ):
-            logger.warning(
-                f"Validation failed: Origin office and "
-                f"destination office are the same for parcel {self.tracking_number}"
-            )
-            raise ValidationError(
-                {
-                    "destination_office": "Відділення призначення не може збігатися з відділенням відправлення."
-                }
-            )
 
     def save(self, *args, **kwargs):
         is_created = self.pk is None
@@ -124,9 +108,6 @@ class Parcel(models.Model):
         if is_created:
             self.current_office = self.origin_office
             self.status = Status.CREATED
-
-        if not kwargs.pop("skip_clean", False):
-            self.full_clean()
 
         super().save(*args, **kwargs)
 

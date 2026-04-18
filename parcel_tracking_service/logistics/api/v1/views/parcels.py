@@ -1,23 +1,26 @@
 import logging
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .filters import ParcelFilter
-from .serializers import (
+from logistics.api.permissions import IsEmployee
+from logistics.api.v1.filters import ParcelFilter
+from logistics.api.v1.serializers import (
     ParcelSerializer,
     ParcelCreateSerializer,
     UpdateStatusSerializer,
 )
-from ...models import Parcel, PostOffice, Status
-from ...services.parcel_service import update_status
-from ...services.services import StandardPagination
+from logistics.models import Parcel, PostOffice, Status
+from logistics.services.parcel_service import update_status
+from logistics.services.services import StandardPagination
 
 logger = logging.getLogger(__name__)
 
 
 class ParcelListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated, IsEmployee]
     queryset = Parcel.objects.select_related(
         "sender",
         "recipient",
@@ -46,6 +49,7 @@ class ParcelListCreateView(generics.ListCreateAPIView):
 
 
 class ParcelDetailView(generics.RetrieveAPIView):
+    permission_classes = [AllowAny]
     queryset = Parcel.objects.select_related(
         "sender", "recipient", "current_status"
     ).prefetch_related("status_history")
@@ -54,11 +58,12 @@ class ParcelDetailView(generics.RetrieveAPIView):
 
 
 class ParcelUpdateStatusView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated, IsEmployee]
     serializer_class = UpdateStatusSerializer
 
     def create(self, request, *args, **kwargs):
         tracking_number = self.kwargs.get("tracking_number")
-        parcel = get_object_or_404(Parcel, tracking_number=tracking_number)
+        get_object_or_404(Parcel, tracking_number=tracking_number)
 
         logger.info(
             f"POST request to update status for {tracking_number} by user {request.user}"
@@ -73,6 +78,7 @@ class ParcelUpdateStatusView(generics.CreateAPIView):
         updated_parcel = update_status(
             tracking_number=tracking_number,
             new_status=serializer.validated_data["status"],
+            user=request.user,
             office=office,
             comment=serializer.validated_data.get("comment", ""),
         )
@@ -83,6 +89,7 @@ class ParcelUpdateStatusView(generics.CreateAPIView):
 
 
 class OfficeParcelsView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated, IsEmployee]
     serializer_class = ParcelSerializer
     pagination_class = StandardPagination
 

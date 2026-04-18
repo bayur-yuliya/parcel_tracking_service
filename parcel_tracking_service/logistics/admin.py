@@ -43,7 +43,13 @@ class ParcelAdmin(admin.ModelAdmin):
         "sender__phone",
     )
 
-    list_filter = ("status", "origin_office", "destination_office", "created_at")
+    list_filter = (
+        "status",
+        "origin_office",
+        "current_office",
+        "destination_office",
+        "created_at",
+    )
 
     inlines = [ParcelStatusHistoryInline]
 
@@ -51,13 +57,13 @@ class ParcelAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (
-            "Основная информация",
+            "Основна інформація",
             {"fields": ("tracking_number", "status", "created_at")},
         ),
-        ("Участники", {"fields": ("sender", "recipient")}),
-        ("Параметры груза", {"fields": ("weight", "declared_value")}),
+        ("Учасники", {"fields": ("sender", "recipient")}),
+        ("Параметри вантажу", {"fields": ("weight", "declared_value")}),
         (
-            "Логистика",
+            "Логістика",
             {"fields": ("origin_office", "current_office", "destination_office")},
         ),
     )
